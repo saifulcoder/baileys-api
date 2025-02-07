@@ -258,7 +258,9 @@ class WhatsappService {
 
 	static getSessionStatus(session: Session) {
 		const state = ["CONNECTING", "CONNECTED", "DISCONNECTING", "DISCONNECTED"];
-		let status = state[(session.ws as WebSocketType).readyState];
+		// let status = state[(session.ws as WebSocketType).readyState];
+		let status = state[(session.ws as unknown as WebSocketType).readyState];
+
 		status = session.user ? "AUTHENTICATED" : status;
 		return session.waStatus !== WAStatus.Unknown ? session.waStatus : status.toLowerCase();
 	}
@@ -282,31 +284,18 @@ class WhatsappService {
 		return WhatsappService.sessions.has(sessionId);
 	}
 
-	static async validJid(session: Session, jid: string, type: "group" | "number" = "number") {
+	static async jidExists(session: Session, jid: string, type: "group" | "number" = "number") {
 		try {
 			if (type === "number") {
 				const [result] = await session.onWhatsApp(jid);
-				if(result?.exists) {
-					return result.jid;
-				} else {
-					return null;
-				}
+				return !!result?.exists;
 			}
 
 			const groupMeta = await session.groupMetadata(jid);
-			if(groupMeta.id) {
-				return groupMeta.id;
-			} else {
-				return null;
-			}
+			return !!groupMeta.id;
 		} catch (e) {
-			return null;
+			return Promise.reject(e);
 		}
-	}
-
-	static async jidExists(session: Session, jid: string, type: "group" | "number" = "number") {
-		const validJid = await this.validJid(session, jid, type);
-		return !!validJid;
 	}
 }
 
